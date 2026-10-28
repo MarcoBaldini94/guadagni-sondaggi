@@ -3,7 +3,7 @@
   "short_name": "Guadagni",
   "description": "Tracker personale di guadagni, prelievi e importi in attesa sui portali di sondaggi retribuiti.",
   "lang": "it",
-  "id": "./",
+  "id": "/guadagni-sondaggi/",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
