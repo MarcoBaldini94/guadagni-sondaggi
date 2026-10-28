@@ -1,0 +1,6 @@
+# Backup con dati personali: non vanno nel repository
+guadagni-sondaggi-*.json
+*.zip
+.DS_Store
+Thumbs.db
+desktop.ini
