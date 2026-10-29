@@ -80,6 +80,21 @@
       <input type="file" id="importFile" accept="application/json,.json" hidden>
       <span id="toolMsg"></span>
     </div>
+
+    <details class="bulk hub" id="hubBox">
+      <summary>Backup automatico sul PC <span class="hub-badge" id="hubBadge"></span></summary>
+      <p class="bulk-intro">Dopo ogni modifica l'app invia una copia dei dati al PC di casa tramite Tailscale. Se il PC non è raggiungibile riprova da sola alla prossima apertura. Le copie finiscono nella cartella <em>backup</em> del progetto su OneDrive.</p>
+      <div class="hub-row">
+        <label for="hubUrl">Indirizzo del PC</label>
+        <input id="hubUrl" type="url" inputmode="url" placeholder="https://nome-pc.xxxx.ts.net:8443" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="hub-actions">
+        <button class="btn" id="hubSave" type="button">Salva e prova</button>
+        <button class="btn" id="hubNow" type="button">Invia backup ora</button>
+        <button class="btn ghost" id="hubRestore" type="button">Ripristina dal PC</button>
+      </div>
+      <p class="hub-status" id="hubStatus" role="status"></p>
+    </details>
   </section>
 </div>
 

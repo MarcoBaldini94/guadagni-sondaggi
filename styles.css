@@ -23,7 +23,7 @@
 }
 *,*::before,*::after{box-sizing:inherit}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:"Schibsted Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;font-size:16px;line-height:1.45;font-variant-numeric:tabular-nums}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Schibsted Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;font-size:16px;line-height:1.45;font-variant-numeric:normal}
 .wrap{max-width:980px;margin:0 auto;padding:28px 18px 64px}
 button,input,select{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--focus);outline-offset:2px}
@@ -130,7 +130,7 @@ details.bulk summary{cursor:pointer;font-weight:700;font-size:16px;padding:14px 
 #bulkTable th.site-col{text-align:center;color:var(--ink);font-weight:700;border-bottom:0}
 #bulkTable th.sub{font-weight:500}
 #bulkTable td.sep,#bulkTable th.sep{border-left:1px solid var(--line)}
-#bulkTable input{width:84px;padding:6px 7px;border-radius:7px;border:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums}
+#bulkTable input{width:84px;padding:6px 7px;border-radius:7px;border:1px solid var(--line);text-align:right;font-variant-numeric:normal}
 #bulkTable input.g{background:var(--earn-soft)}
 #bulkTable input.p{background:var(--out-soft)}
 #bulkTable input.bad{border-color:var(--neg)}
@@ -185,8 +185,20 @@ html,body{overflow-x:hidden}
 .brow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;padding:9px 0;border-top:1px solid var(--line)}
 .brow-name{grid-column:1/-1;font-weight:600;font-size:14.5px;display:flex;align-items:center;gap:8px}
 .bfield{display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:var(--muted)}
-.bfield input{width:100%;height:42px;padding:6px 10px;border-radius:8px;border:1px solid var(--line);text-align:right;font-size:16px;font-variant-numeric:tabular-nums}
+.bfield input{width:100%;height:42px;padding:6px 10px;border-radius:8px;border:1px solid var(--line);text-align:right;font-size:16px;font-variant-numeric:normal}
 .bfield input.g{background:var(--earn-soft)}
 .bfield input.p{background:var(--out-soft)}
 .bfield input.bad{border-color:var(--neg)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* Backup automatico sul PC */
+details.hub{margin-top:14px}
+details.hub summary{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.hub-badge{font-size:12.5px;font-weight:600;padding:2px 9px;border-radius:999px;background:var(--bg);color:var(--muted)}
+.hub-badge.ok{background:var(--earn-soft);color:var(--earn)}
+.hub-badge.warn{background:var(--out-soft);color:var(--out)}
+.hub-row{display:flex;flex-direction:column;gap:5px;font-size:14px;margin-bottom:10px}
+.hub-row input{padding:9px 11px;border-radius:8px;border:1px solid var(--line);background:var(--bg);min-height:42px;font-size:15px}
+.hub-actions{display:flex;flex-wrap:wrap;gap:8px}
+.hub-actions .btn{min-height:40px}
+.hub-status{font-size:13.5px;color:var(--muted);margin:10px 0 0;min-height:1em}

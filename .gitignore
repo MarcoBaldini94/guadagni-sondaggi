@@ -7,3 +7,6 @@ desktop.ini
 
 # Anteprime generate da Claude
 Claude outputs/
+
+# Backup inviati dal telefono tramite l hub (dati personali)
+backup/

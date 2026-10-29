@@ -90,6 +90,7 @@
       lastSavedAt=payload.updatedAt;
       localStorage.setItem(LS_KEY,JSON.stringify(payload));
       setStatus("Salvato su questo dispositivo");
+      if(typeof scheduleHub==="function") scheduleHub();
     }catch(e){setStatus("Salvataggio non riuscito ("+(e&&e.message||"errore")+"): riprovo alla prossima modifica")}
     saving=false;
     if(pending){pending=false;save()}
@@ -531,7 +532,90 @@
   mq.addEventListener("change",()=>{renderMonthTable();renderBulk(true)});
   document.addEventListener("click",e=>{if(tipKey&&!$("chart").contains(e.target)){tipKey=null;$("tip").style.opacity=0}});
 
-  init();
+
+  /* ---------- Backup automatico sul PC (hub via Tailscale) ---------- */
+  const HUB_APP="guadagni", HUB_URL_KEY="hub-url", HUB_STATE_KEY="hub-stato";
+  let hubTimer=null, hubBusy=false;
+  function lsGet(k){try{return localStorage.getItem(k)}catch(e){return null}}
+  function lsSet(k,v){try{localStorage.setItem(k,v)}catch(e){}}
+  function hubUrl(){return (lsGet(HUB_URL_KEY)||"").trim().replace(/\/+$/,"")}
+  function hubState(){try{return JSON.parse(lsGet(HUB_STATE_KEY)||"{}")}catch(e){return {}}}
+  function setHubState(o){lsSet(HUB_STATE_KEY,JSON.stringify(Object.assign(hubState(),o)))}
+  function hubPayload(){return {v:1,sites:SITES,months:clean(state.months),pending:cleanPending(state.pending)}}
+  async function hash(str){
+    try{const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(str));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("")}
+    catch(e){let h=0;for(let i=0;i<str.length;i++)h=(h*31+str.charCodeAt(i))|0;return "s"+h}
+  }
+  function fmtWhen(iso){
+    if(!iso) return "mai";
+    const d=new Date(iso),t=new Date();
+    const hm=d.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"});
+    if(d.toDateString()===t.toDateString()) return "oggi "+hm;
+    const y=new Date(t);y.setDate(t.getDate()-1);
+    if(d.toDateString()===y.toDateString()) return "ieri "+hm;
+    return d.toLocaleDateString("it-IT",{day:"2-digit",month:"2-digit"})+" "+hm;
+  }
+  function renderHub(msg){
+    const st=hubState(),url=hubUrl(),badge=$("hubBadge");
+    if(document.activeElement!==$("hubUrl")) $("hubUrl").value=url;
+    if(!url){badge.textContent="non attivo";badge.className="hub-badge"}
+    else if(st.lastErr&&(!st.lastOk||st.lastErrAt>st.lastOk)){badge.textContent="PC non raggiungibile";badge.className="hub-badge warn"}
+    else {badge.textContent="ultimo: "+fmtWhen(st.lastOk);badge.className="hub-badge ok"}
+    $("hubStatus").textContent=msg!=null?msg:(url?("Ultimo backup riuscito: "+fmtWhen(st.lastOk)+(st.lastErr&&(!st.lastOk||st.lastErrAt>st.lastOk)?" · ultimo tentativo fallito "+fmtWhen(st.lastErrAt)+" ("+st.lastErr+")":"")):"Inserisci l'indirizzo del PC per attivarlo.");
+  }
+  async function hubFetch(path,opt){
+    const url=hubUrl();if(!url) throw new Error("indirizzo non impostato");
+    const ctl=new AbortController();const to=setTimeout(()=>ctl.abort(),12000);
+    try{
+      const r=await fetch(url+path,Object.assign({signal:ctl.signal,cache:"no-store"},opt||{}));
+      let body=null;try{body=await r.json()}catch(e){}
+      if(!r.ok) throw new Error((body&&body.errore)||("HTTP "+r.status));
+      return body;
+    }catch(e){
+      if(e.name==="AbortError") throw new Error("nessuna risposta");
+      if(e instanceof TypeError) throw new Error("PC non raggiungibile");
+      throw e;
+    }finally{clearTimeout(to)}
+  }
+  async function hubSync(force){
+    if(hubBusy||!hubUrl()) return;
+    const payload=JSON.stringify(hubPayload());const h=await hash(payload);
+    if(!force&&hubState().lastHash===h) return;
+    hubBusy=true;renderHub("Invio del backup al PC…");
+    try{
+      const r=await hubFetch("/api/"+HUB_APP+"/backup",{method:"POST",headers:{"Content-Type":"application/json"},body:payload});
+      setHubState({lastHash:h,lastOk:new Date().toISOString(),lastErr:null,lastFile:r&&r.file});
+      renderHub(r&&r.salvato===false?"Il PC ha già questa versione ("+fmtWhen(hubState().lastOk)+")":null);
+    }catch(e){
+      setHubState({lastErr:e.message,lastErrAt:new Date().toISOString()});renderHub();
+    }finally{hubBusy=false}
+  }
+  function scheduleHub(){clearTimeout(hubTimer);hubTimer=setTimeout(()=>hubSync(false),8000)}
+  $("hubSave").addEventListener("click",async()=>{
+    let v=$("hubUrl").value.trim().replace(/\/+$/,"");
+    if(v&&!/^https:\/\//i.test(v)){renderHub("L'indirizzo deve iniziare con https://");return}
+    lsSet(HUB_URL_KEY,v);
+    if(!v){renderHub();return}
+    renderHub("Provo il collegamento…");
+    try{const r=await hubFetch("/api/ping");renderHub("Collegato a "+r.pc+". Invio il primo backup…");await hubSync(true)}
+    catch(e){setHubState({lastErr:e.message,lastErrAt:new Date().toISOString()});renderHub("Collegamento non riuscito: "+e.message+". Controlla che Tailscale sia attivo sul telefono.")}
+  });
+  $("hubNow").addEventListener("click",()=>hubSync(true));
+  $("hubRestore").addEventListener("click",async()=>{
+    renderHub("Scarico l'ultimo backup dal PC…");
+    try{
+      const r=await hubFetch("/api/"+HUB_APP+"/backup/ultimo");
+      const d=r.dati;if(!d||typeof d.months!=="object") throw new Error("backup non valido");
+      const newSites=sanitizeSites(d.sites);const oldSites=SITES;SITES=newSites;const imported=clean(d.months);SITES=oldSites;
+      if(!confirm("Sostituire i dati di questo telefono con il backup del PC "+r.file+" ("+Object.keys(imported).length+" mesi, "+newSites.length+" piattaforme)?")){renderHub();return}
+      SITES=newSites;state={v:1,months:imported,pending:cleanPending(d.pending)};renderAll();save();
+      renderHub("Ripristinato da "+r.file);
+    }catch(e){renderHub("Ripristino non riuscito: "+e.message)}
+  });
+  document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")hubSync(false)});
+  window.addEventListener("online",()=>hubSync(false));
+  renderHub();
+  init().then(()=>setTimeout(()=>hubSync(false),1500));
 })();
 
 // App installabile: service worker per apertura rapida e funzionamento offline
